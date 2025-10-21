@@ -4,7 +4,7 @@ const Home = () => {
   const navigate = useNavigate();
   return (
     <>
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 text-gray-800 py-12">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 text-gray-800 py-12 px-2">
         <header className="text-center mb-12">
           <h1 className="text-3xl md:text-4xl font-bold text-blue-700">
             Generador de Informes Fonoaudiológicos

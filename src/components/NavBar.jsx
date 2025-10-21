@@ -8,16 +8,16 @@ const NavBar = () => {
         {/* Logo o título */}
         <Link
           to="/"
-          className="text-blue-700 font-bold text-lg hover:text-blue-800 transition-colors"
+          className="text-blue-700 font-bold text-lg hover:text-blue-800 transition-colors text-center mr-4"
         >
-          🩺 Generador de Informes
+          <span className="">🩺</span> Infono
         </Link>
 
         {/* Botones de navegación */}
         <div className="flex items-center gap-4">
           <Link
             to="/"
-            className={`px-3 py-2 rounded-md font-medium ${
+            className={`px-3 py-2 rounded-md font-medium text-xs xl:text-lg ${
               location.pathname === "/"
                 ? "bg-blue-50 text-blue-700"
                 : "text-gray-600 hover:text-blue-700"
@@ -28,7 +28,7 @@ const NavBar = () => {
 
           <Link
             to="/informe-ninos"
-            className={`px-3 py-2 rounded-md font-medium ${
+            className={`px-3 py-2 rounded-md font-medium text-xs xl:text-lg ${
               location.pathname === "/informe-ninos"
                 ? "bg-blue-50 text-blue-700"
                 : "text-gray-600 hover:text-blue-700"
@@ -39,7 +39,7 @@ const NavBar = () => {
 
           <Link
             to="/informe-bebes"
-            className={`px-3 py-2 rounded-md font-medium ${
+            className={`px-3 py-2 rounded-md font-medium text-xs xl:text-lg ${
               location.pathname === "/informe-bebes"
                 ? "bg-blue-50 text-blue-700"
                 : "text-gray-600 hover:text-blue-700"
