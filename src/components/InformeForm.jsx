@@ -11,6 +11,7 @@ import {
   WidthType,
 } from "docx";
 import { saveAs } from "file-saver";
+import { Link } from "react-router-dom";
 
 /**
  * Formato: Niños y Adolescentes (sin condicionales)
