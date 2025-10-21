@@ -10,11 +10,11 @@ const NavBar = () => {
           to="/"
           className="text-blue-700 font-bold text-lg hover:text-blue-800 transition-colors text-center mr-4"
         >
-          <span className="">🩺</span> Infono
+          <span className="">🩺</span> InFono
         </Link>
 
         {/* Botones de navegación */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 text-center">
           <Link
             to="/"
             className={`px-3 py-2 rounded-md font-medium text-xs xl:text-lg ${
