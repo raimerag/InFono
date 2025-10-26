@@ -23,7 +23,7 @@ import { Link } from "react-router-dom";
  * - Labels importantes en negrita
  */
 
-export default function InformeNinosAdolescentes() {
+export default function NewForm() {
   // Color del título (DERIVACIÓN y Frenectomía)
   const [tituloColor, setTituloColor] = useState("#1f4ed8"); // azul por defecto
 
@@ -67,7 +67,15 @@ export default function InformeNinosAdolescentes() {
 
   const onImgs = (e) => {
     const files = Array.from(e.target.files || []);
-    setImagenes(files);
+    if (imagenes.length + files.length > 5) {
+      alert("Solo se permiten hasta 5 imágenes por informe.");
+      return;
+    }
+    setImagenes((prev) => [...prev, ...files]);
+  };
+
+  const eliminarImagen = (index) => {
+    setImagenes((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Helpers
@@ -111,33 +119,31 @@ export default function InformeNinosAdolescentes() {
     const doc = new jsPDF({ unit: "mm", format: "a4" });
     const marginX = 18;
     let y = 20;
-    const maxWidth = 174; // 210 - 2*18
+    const maxWidth = 174;
     const normalLH = 6;
 
-    // Títulos con color
     const { r, g, b } = hexToRgb(tituloColor);
-    doc.setFontSize(16);
+    doc.setFont("times", "bold");
+    doc.setFontSize(18);
     doc.setTextColor(r, g, b);
     doc.text("DERIVACIÓN FONOAUDIOLÓGICA", marginX, y);
     y += 8;
     doc.text("Frenectomía", marginX, y);
     y += 10;
 
-    // Volver a negro
     doc.setTextColor(0, 0, 0);
+    doc.setFont("times", "normal");
     doc.setFontSize(12);
 
-    // Datos en negrita (labels)
     const putBoldLine = (label, value) => {
       const line = `${label}${value ?? ""}`;
       const wrapped = doc.splitTextToSize(line, maxWidth);
       wrapped.forEach((l, i) => {
         if (i === 0) {
-          // Pintamos el label en bold
           const labelWidth = doc.getTextWidth(label);
-          doc.setFont(undefined, "bold");
+          doc.setFont("times", "bold");
           doc.text(label, marginX, y);
-          doc.setFont(undefined, "normal");
+          doc.setFont("times", "normal");
           doc.text(l.replace(label, ""), marginX + labelWidth, y);
         } else {
           doc.text(l, marginX, y);
@@ -150,101 +156,65 @@ export default function InformeNinosAdolescentes() {
     putBoldLine("Edad:", ` ${data.edad}`);
     putBoldLine("Fecha de examen:", ` ${data.fecha_examen}`);
     putBoldLine(
-      "Motivo de consulta:  ",
-      `  Derivado desde ${data.derivado_desde} (Dra. ${data.dra_nombre}) para evaluación de ${data.para_evaluacion}.`
+      "Motivo de consulta: ",
+      `Derivado desde ${data.derivado_desde} (Dra. ${data.dra_nombre}) para evaluación de ${data.para_evaluacion}.`
     );
     y += 2;
 
-    // Bloque clínico
-    const bloqueClinico = lineasBloqueClinico();
-    for (const entry of bloqueClinico) {
-      if (typeof entry === "string") {
-        const lines = doc.splitTextToSize(entry, maxWidth);
-        for (const l of lines) {
-          if (y > 280) {
-            doc.addPage();
-            y = 20;
-          }
-          doc.text(l, marginX, y);
-          y += normalLH;
-        }
-      } else if (entry?.bold) {
-        if (y > 280) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.setFont(undefined, "bold");
-        doc.text(entry.label, marginX, y);
-        doc.setFont(undefined, "normal");
-        y += normalLH;
-      }
-    }
+    const texto = [
+      "",
+      "Estimado/a Dr/a.:",
+      `Paciente es evaluado por Fonoaudióloga especialista en Motricidad Orofacial. En la evaluación, al observar movimientos aislados de lengua ${data.mov_aislados_lengua}. Frenillo lingual alterado, ${data.frenillo_alterado}. Inserción en ${data.insercion_en_1} y en ${data.insercion_en_2}.`,
+      "",
+      `Alteración en funciones orofaciales de ${data.alteracion_funciones}. En reposo ${data.en_reposo}. En deglución ${data.en_deglucion}. Masticación ${data.masticacion}. En habla, ${data.en_habla}.`,
+      "",
+      `Se adjuntan fotografías que muestran de manera gráfica lo anteriormente expuesto:`,
+    ];
 
-    // Imágenes en grilla (2 por fila)
-    const imgW = 85,
-      imgH = 64,
+    texto.forEach((t) => {
+      const lines = doc.splitTextToSize(t, maxWidth);
+      lines.forEach((l) => {
+        doc.text(l, marginX, y);
+        y += normalLH;
+      });
+    });
+
+    // 🖼️ Imágenes alineadas (1 fila máx. 5)
+    const imgW = 33,
+      imgH = 25,
       gap = 4;
-    let col = 0;
     let x = marginX;
 
-    for (const file of imagenes) {
-      // Si no cabe la fila, salto de página
-      if (y + imgH > 280) {
-        doc.addPage();
-        y = 20;
-      }
-
-      const base64 = await fileToBase64(file);
+    for (let i = 0; i < Math.min(imagenes.length, 5); i++) {
+      const base64 = await fileToBase64(imagenes[i]);
       doc.addImage(base64, "JPEG", x, y, imgW, imgH);
-
-      col += 1;
-      if (col === 2) {
-        // fin de fila
-        col = 0;
-        x = marginX;
-        y += imgH + gap;
-      } else {
-        x = marginX + imgW + gap;
-      }
-    }
-    if (col !== 0) {
-      // cerrar última fila
-      y += imgH + gap;
-      col = 0;
-      x = marginX;
+      x += imgW + gap;
     }
 
-    // Cierre
-    const bloqueCierre = lineasBloqueCierre();
-    for (const entry of bloqueCierre) {
-      if (typeof entry === "string") {
-        const lines = doc.splitTextToSize(entry, maxWidth);
-        for (const l of lines) {
-          if (y > 280) {
-            doc.addPage();
-            y = 20;
-          }
-          doc.text(l, marginX, y);
-          y += normalLH;
-        }
-      } else if (entry?.bold) {
-        if (y > 280) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.setFont(undefined, "bold");
-        doc.text(entry.label, marginX, y);
-        doc.setFont(undefined, "normal");
+    y += imgH + 6;
+
+    const cierre = [
+      "",
+      "De acuerdo a estos antecedentes, se hace necesaria la derivación a su especialidad...",
+      "",
+      "Saluda atentamente,",
+      `${data.firma_nombre}`,
+      "Fonoaudióloga",
+      `Especialista en ${data.especialista_en}`,
+      "",
+      `Fecha: ${data.fecha_final}`,
+      `Dirección: ${data.direccion}`,
+    ];
+
+    cierre.forEach((t) => {
+      const lines = doc.splitTextToSize(t, maxWidth);
+      lines.forEach((l) => {
+        doc.text(l, marginX, y);
         y += normalLH;
-      }
-    }
+      });
+    });
 
-    doc.save(
-      `Informe-Fonoaudiologico-${(data.nombre || "paciente").replace(
-        /\s+/g,
-        "_"
-      )}.pdf`
-    );
+    doc.save(`Informe-Fonoaudiologico-${data.nombre || "paciente"}.pdf`);
   };
 
   // —————————————————————
@@ -255,90 +225,61 @@ export default function InformeNinosAdolescentes() {
 
     const makePara = (text, bold = false, size = 24, color) =>
       new Paragraph({
-        children: [new TextRun({ text, bold, size, color })],
+        alignment: "justify",
+        spacing: { line: 280 }, // interlineado ~1.2
+        children: [
+          new TextRun({
+            text,
+            bold,
+            size,
+            color,
+            font: "Times New Roman",
+          }),
+        ],
       });
 
     const paras = [
-      makePara("DERIVACIÓN FONOAUDIOLÓGICA", true, 30, titleHex),
+      makePara("DERIVACIÓN FONOAUDIOLÓGICA", true, 32, titleHex),
       makePara("Frenectomía", true, 28, titleHex),
       makePara(""),
-      new Paragraph({
-        children: [
-          new TextRun({ text: "Nombre:", bold: true, size: 24 }),
-          new TextRun({ text: ` ${data.nombre}`, size: 24 }),
-        ],
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({ text: "Edad:", bold: true, size: 24 }),
-          new TextRun({ text: ` ${data.edad}`, size: 24 }),
-        ],
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({ text: "Fecha de examen:", bold: true, size: 24 }),
-          new TextRun({ text: ` ${data.fecha_examen}`, size: 24 }),
-        ],
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({ text: "Motivo de consulta:", bold: true, size: 24 }),
-          new TextRun({
-            text: ` Derivado desde ${data.derivado_desde} (Dra. ${data.dra_nombre}) para evaluación de ${data.para_evaluacion}.`,
-            size: 24,
-          }),
-        ],
-      }),
+      makePara(`Nombre: ${data.nombre}`, true),
+      makePara(`Edad: ${data.edad}`, true),
+      makePara(`Fecha de examen: ${data.fecha_examen}`, true),
+      makePara(
+        `Motivo de consulta: Derivado desde ${data.derivado_desde} (Dra. ${data.dra_nombre}) para evaluación de ${data.para_evaluacion}.`
+      ),
       makePara(""),
       makePara("Estimado/a Dr/a.:", true),
       makePara(
-        `Paciente es evaluado por Fonoaudióloga especialista en Motricidad Orofacial.`
+        `Paciente es evaluado por Fonoaudióloga especialista en Motricidad Orofacial. En la evaluación, al observar movimientos aislados de lengua ${data.mov_aislados_lengua}. Frenillo lingual alterado, ${data.frenillo_alterado}. Inserción en ${data.insercion_en_1} y en ${data.insercion_en_2}. Para tocar papila incisiva con ápice lingual debe disminuir apertura bucal máxima a un 48%.`
       ),
       makePara(
-        `En la evaluación, al observar movimientos aislados de lengua ${data.mov_aislados_lengua}.`
-      ),
-      makePara(`Frenillo lingual alterado, ${data.frenillo_alterado}.`),
-      makePara(
-        `Inserción en ${data.insercion_en_1} y en ${data.insercion_en_2}.`
-      ),
-      makePara(
-        `Para tocar papila incisiva con ápice lingual debe disminuir apertura bucal máxima a un 48%.`
+        `Alteración en funciones orofaciales de ${data.alteracion_funciones}. En reposo ${data.en_reposo}. En deglución ${data.en_deglucion}. Masticación ${data.masticacion}. En habla, ${data.en_habla}.`
       ),
       makePara(""),
       makePara(
-        `Alteración en funciones orofaciales de ${data.alteracion_funciones}.`
+        "Se adjuntan fotografías que muestran lo anteriormente expuesto:"
       ),
-      makePara(`En reposo ${data.en_reposo}.`),
-      makePara(`En deglución ${data.en_deglucion}.`),
-      makePara(`Masticación ${data.masticacion}.`),
-      makePara(`En habla, ${data.en_habla}.`),
-      makePara(""),
-      makePara(
-        `Se adjuntan fotografías que muestran de manera gráfica lo anteriormente expuesto:`
-      ),
-      makePara(""),
     ];
 
-    // 🖼️ Imágenes (3 por fila)
-    const rows = [];
-    const perRow = 3;
-    for (let i = 0; i < imagenes.length; i += perRow) {
-      const slice = imagenes.slice(i, i + perRow);
+    // 🖼️ Imágenes en una sola fila (máx. 5)
+    if (imagenes.length > 0) {
       const cells = [];
 
-      for (const file of slice) {
+      for (const file of imagenes.slice(0, 5)) {
         const buf = await file.arrayBuffer();
 
         cells.push(
           new TableCell({
-            width: { size: 100 / perRow, type: WidthType.PERCENTAGE },
+            width: { size: 20, type: WidthType.PERCENTAGE },
+            margins: { top: 0, bottom: 0, left: 0, right: 0 },
             children: [
               new Paragraph({
+                alignment: "center",
                 children: [
-                  // 👇 Ajusta el tamaño para que quepa en una página
                   new ImageRun({
                     data: buf,
-                    transformation: { width: 200, height: 160 },
+                    transformation: { width: 90, height: 65 },
                   }),
                 ],
               }),
@@ -347,55 +288,51 @@ export default function InformeNinosAdolescentes() {
         );
       }
 
-      while (cells.length < perRow) {
+      while (cells.length < 5) {
         cells.push(
           new TableCell({
-            width: { size: 100 / perRow, type: WidthType.PERCENTAGE },
-            children: [
-              new Paragraph({ children: [new TextRun({ text: "" })] }),
-            ],
+            width: { size: 20, type: WidthType.PERCENTAGE },
+            children: [new Paragraph({ children: [new TextRun("")] })],
           })
         );
       }
 
-      rows.push(new TableRow({ children: cells }));
+      const table = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [new TableRow({ children: cells })],
+        margins: { top: 0, bottom: 0 },
+      });
+
+      paras.push(makePara(""));
+      paras.push(table);
     }
 
-    if (rows.length) {
-      paras.push(new Paragraph(""));
-      paras.push(
-        new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
-          rows,
-        })
-      );
-    }
-
-    // 🧾 Cierre
-    paras.push(makePara(""));
-    paras.push(
-      makePara(
-        `De acuerdo a estos antecedentes, se hace necesaria la derivación a su especialidad, ya que se sugiere realizar cirugía remedial de frenillo lingual, con sesiones de terapia miofuncional previas y posteriores a dicha cirugía.`
-      )
-    );
     paras.push(makePara(""));
     paras.push(makePara("Saluda atentamente,", true));
-    paras.push(makePara(`${data.firma_nombre}`));
-    paras.push(makePara(`Fonoaudióloga`));
+    paras.push(makePara(data.firma_nombre));
+    paras.push(makePara("Fonoaudióloga"));
     paras.push(makePara(`Especialista en ${data.especialista_en}`));
     paras.push(makePara(""));
     paras.push(makePara(`Fecha: ${data.fecha_final}`));
     paras.push(makePara(`Dirección: ${data.direccion}`));
 
-    // 📝 Crear el documento y descargar con timestamp
-    const doc = new Document({ sections: [{ children: paras }] });
+    const doc = new Document({
+      sections: [
+        {
+          properties: {
+            page: {
+              margin: { top: 720, right: 720, bottom: 720, left: 720 }, // 2.5 cm aprox
+            },
+          },
+          children: paras,
+        },
+      ],
+    });
+
     const blob = await Packer.toBlob(doc);
-
-    const nombreLimpio = (data.nombre || "paciente").replace(/\s+/g, "_");
-    const nombreArchivo = `Informe-Fonoaudiologico-${nombreLimpio}${
-      timestamp ? `-${timestamp}` : ""
-    }.docx`;
-
+    const nombreArchivo = `Informe-Fonoaudiologico-${
+      data.nombre || "paciente"
+    }-${timestamp || ""}.docx`;
     saveAs(blob, nombreArchivo);
   };
 
@@ -436,7 +373,7 @@ export default function InformeNinosAdolescentes() {
 
   return (
     <>
-      <div className="bg-gradient-to-b from-gray-50 to-gray-100 text-gray-800 p-4">
+      <div className="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen text-gray-800 p-6">
         <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow my-20">
           <h1 className="text-2xl font-bold mb-4 text-center">
             Informe — Niños / Adolescentes
@@ -629,28 +566,38 @@ export default function InformeNinosAdolescentes() {
 
             {/* Imágenes */}
             <div>
-              <label className="font-semibold">
-                Fotografías (se acomodan en filas)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={onImgs}
-                className="block mt-1"
-              />
-              {imagenes.length > 0 && (
-                <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {imagenes.map((f, i) => (
+              <label className="font-semibold">Fotografías (máx. 5)</label>
+              <div className="mt-2 flex flex-wrap gap-3">
+                {imagenes.map((file, i) => (
+                  <div key={i} className="relative">
                     <img
-                      key={i}
-                      src={URL.createObjectURL(f)}
+                      src={URL.createObjectURL(file)}
                       alt=""
-                      className="w-full aspect-video object-cover rounded border"
+                      className="w-24 h-24 object-cover rounded border shadow-sm"
                     />
-                  ))}
-                </div>
-              )}
+                    <button
+                      type="button"
+                      onClick={() => eliminarImagen(i)}
+                      className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-700"
+                      title="Eliminar imagen"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                {imagenes.length < 5 && (
+                  <label className="cursor-pointer bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 transition text-sm flex items-center gap-2">
+                    ➕ Agregar imágenes
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={onImgs}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
             </div>
 
             {/* Firma y pie */}
